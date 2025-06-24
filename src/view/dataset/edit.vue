@@ -1,11 +1,11 @@
 <template>
   <div>
-    <el-button type="primary">Primary</el-button>
+    <el-button type="primary">添加</el-button>
   </div>
 </template>
 <script>
 export default {
-  name: 'HelloWorld',
+  name: 'DataSetEdit',
   components: {},
   data () {
     return {

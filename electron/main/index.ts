@@ -3,6 +3,10 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import os from 'node:os'
+import { registerDatasetHandlers } from './ipcMain'
+import { getSqlite3 } from '../sqlite3'
+import initDB from '../initDB'
+import initVetorDB from '../initVetorDB'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -78,7 +82,18 @@ async function createWindow() {
   // win.webContents.on('will-navigate', (event, url) => { }) #344
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  registerDatasetHandlers(); // 注册通信
+  createWindow()
+  getSqlite3().then(database => {
+    // ensure did-finish-load
+    setTimeout(async () => {
+      win?.webContents.send('main-process-message', '[sqlite3] initialize success :)')
+      await initDB()
+      await initVetorDB()
+    }, 999)
+  })
+})
 
 app.on('window-all-closed', () => {
   win = null

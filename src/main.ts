@@ -14,7 +14,9 @@ import './demos/ipc'
 // 路由
 import router from './router'
 
-createApp(App).use(ElementPlus).use(router)
+import locale from 'element-plus/es/locale/lang/zh-cn'
+
+createApp(App).use(ElementPlus, { locale }).use(router)
   .mount('#app')
   .$nextTick(() => {
     postMessage({ payload: 'removeLoading' }, '*')

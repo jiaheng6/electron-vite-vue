@@ -1,59 +1,123 @@
 <script setup lang="ts">
-import { Bubble } from 'ant-design-x-vue';
 import { UserOutlined } from '@ant-design/icons-vue';
-import { Flex, Avatar } from 'ant-design-vue';
-import type { CSSProperties } from 'vue';
-import { h } from 'vue';
+import { BubbleList } from 'ant-design-x-vue';
+import { Button, Flex, Switch } from 'ant-design-vue';
+import type { BubbleListProps, BubbleProps } from 'ant-design-x-vue';
+import type { SwitchProps } from 'ant-design-vue';
+import { ref, h } from 'vue';
 
-defineOptions({ name: 'AXBubbleAvatarAndPlacementSetup' });
+defineOptions({ name: 'AXBubbleListSetup' });
 
-const fooAvatar: CSSProperties = {
-  color: '#f56a00',
-  backgroundColor: '#fde3cf',
+const rolesAsObject: BubbleListProps['roles'] = {
+  ai: {
+    placement: 'start',
+    avatar: { icon: h(UserOutlined), style: { background: '#fde3cf' } },
+    typing: { step: 5, interval: 20 },
+    style: {
+      maxWidth: '600px',
+    },
+  },
+  user: {
+    placement: 'end',
+    avatar: { icon: h(UserOutlined), style: { background: '#87d068' } },
+  },
 };
 
-const barAvatar: CSSProperties = {
-  color: '#fff',
-  backgroundColor: '#87d068',
+const rolesAsFunction = (bubbleData: BubbleProps, index: number) => {
+  const RenderIndex: BubbleProps['messageRender'] = (content) =>
+      h(Flex, null, () => [h('text', null, `#${index}: ${content}`)]);
+  switch (bubbleData.role) {
+    case 'ai':
+      return {
+        placement: 'start' as const,
+        avatar: { icon: h(UserOutlined), style: { background: '#fde3cf' } },
+        typing: { step: 5, interval: 20 },
+        style: {
+          maxWidth: 600,
+        },
+        messageRender: RenderIndex,
+      };
+    case 'user':
+      return {
+        placement: 'end' as const,
+        avatar: { icon: h(UserOutlined), style: { background: '#87d068' } },
+        messageRender: RenderIndex,
+      };
+    default:
+      return { messageRender: RenderIndex };
+  }
 };
 
-const hideAvatar: CSSProperties = {
-  visibility: 'hidden',
+const count = ref<number>(3);
+const useRolesAsFunction = ref(false);
+
+// const listRef = useTemplateRef<InstanceType<typeof BubbleList>>(null);
+const listRef = ref<InstanceType<typeof BubbleList>>();
+
+const handleChange = (checked: SwitchProps['checked']) => {
+  useRolesAsFunction.value = checked as boolean;
 };
 </script>
 
 <template>
-  <Flex
-      gap="middle"
-      vertical
-  >
-    <Bubble
-        placement="start"
-        content="Good morning, how are you?"
-        :avatar="{ icon: h(UserOutlined), style: fooAvatar }"
-    />
-    <Bubble
-        placement="start"
-        content="What a beautiful day!"
-        :styles="{ avatar: hideAvatar }"
-        :avatar="{}"
-    />
-    <Bubble
-        placement="end"
-        content="Hi, good morning, I'm fine!"
-    >
-      <template #avatar>
-        <Avatar
-            :icon="h(UserOutlined)"
-            :style="barAvatar"
-        />
-      </template>
-    </Bubble>
-    <Bubble
-        placement="end"
-        content="Thank you!"
-        :styles="{ avatar: hideAvatar }"
-        :avatar="{}"
+  <Flex vertical gap="small" class="bubble-list">
+    <Flex gap="large" align="center">
+      Use roles as:
+      <Switch
+          :checked="useRolesAsFunction"
+          @change="handleChange"
+          checkedChildren="Function"
+          unCheckedChildren="Object"
+      />
+    </Flex>
+
+    <Flex gap="small" :style="{ alignSelf: 'flex-end' }">
+      <Button
+          @click="
+          () => {
+            count++;
+          }
+        "
+      >
+        Add Bubble
+      </Button>
+
+      <Button
+          @click="
+          () => {
+            listRef?.scrollTo({ key: 0, block: 'nearest' });
+          }
+        "
+      >
+        Scroll To First
+      </Button>
+    </Flex>
+
+    <BubbleList
+        ref="listRef"
+        :style="{ maxHeight: '300px' }"
+        :roles="useRolesAsFunction ? rolesAsFunction : rolesAsObject"
+        :items="
+        Array.from({ length: count }).map((_, i) => {
+          const isAI = !!(i % 2);
+          const content = isAI
+            ? 'Mock AI content. '.repeat(20)
+            : 'Mock user content.';
+
+          return {
+            key: i,
+            role: isAI ? 'ai' : 'user',
+            content,
+          };
+        })
+      "
     />
   </Flex>
 </template>
+
+
+<style lang="scss" scoped>
+.bubble-list {
+  width: 100%;
+}
+</style>

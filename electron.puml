@@ -1,0 +1,8 @@
+@startuml
+   Vue组件 -> 预加载脚本: window.ipcRenderer.send('dataset:add', data)
+   预加载脚本 -> 主进程: ipcMain.on('dataset:add')
+   主进程 -> SQLite: 执行插入/删除
+   SQLite --> 主进程: 操作结果
+   主进程 --> 预加载脚本: 发送事件通知
+   预加载脚本 --> Vue组件: 通过事件监听更新UI
+   @enduml

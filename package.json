@@ -40,10 +40,13 @@
     "vue-tsc": "^2.0.6"
   },
   "dependencies": {
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.38.0",
     "@element-plus/icons-vue": "^2.3.1",
     "@lancedb/lancedb": "^0.21.0",
     "@llamaindex/openai": "^0.4.7",
     "ant-design-x-vue": "^1.2.7",
+    "codemirror": "^6.0.2",
     "element-plus": "^2.10.2",
     "llamaindex": "^0.11.12",
     "sqlite3": "^5.1.7",

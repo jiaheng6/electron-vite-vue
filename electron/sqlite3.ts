@@ -279,3 +279,13 @@ export async function paginate(table: string, page: number, pageSize: number, wh
         totalPages: Math.ceil(Number(total) / pageSize)
     }
 }
+
+export async function dropTable(tableName: string) {
+    const db = await getSqlite3()
+    return new Promise((resolve, reject) => {
+        db.run(`DROP TABLE IF EXISTS ${tableName}`, (err) => {
+            if (err) reject(err)
+            else resolve(true)
+        })
+    })
+}

@@ -7,32 +7,41 @@ export class FileHandler {
     }
 
 
-    async parseLogs(logText: string, regex: string, fieldNames: string[]) {
+    formatTimestamp(isoString) {
+        const date = new Date(isoString);
+        return date.toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+            fractionalSecondDigits: 3
+        }).replace(/\//g, '-');
+    }
+    async parseLogs(logText) {
         return new Promise((resolve, reject) => {
             try {
-                console.log('parseLogs--19--❀---> ', regex, fieldNames)
-                const regexObj = new RegExp(regex);
-                const globalRegex = regexObj.global ? regexObj : new RegExp(regexObj.source, (regexObj.flags || '') + 'g');
+                // 正则表达式匹配时间戳和内容
+                const logRegex = /(?<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}\+\d{2}:\d{2})\s+(?<content>[\s\S]*?)(?=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}\+\d{2}:\d{2}|$)/g;
 
-                const lines = logText.split('\n');
-                let result = [];
-                for (const line of lines) {
-                    const matches = Array.from(line.matchAll(globalRegex), match => {
-                        const entry = {};
-                        fieldNames.forEach((field, index) => {
-                            if (field && match[index + 1]) {
-                                entry[field] = match[index + 1]?.trim();
-                            }
-                        });
-                        return entry;
+                const logs = [];
+                let match;
+
+                while ((match = logRegex.exec(logText)) !== null) {
+                    const { timestamp, content } = match.groups;
+
+                    logs.push({
+                        timestamp: this.formatTimestamp(timestamp),
+                        content: `${timestamp} ${content.trim()}`
                     });
-                    result = result.concat(matches);
                 }
-                resolve(result);
+                resolve(logs);
             } catch (e) {
-                reject(e)
+                reject(e);
             }
-        })
+        });
     }
 
 

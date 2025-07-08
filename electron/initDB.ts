@@ -132,7 +132,18 @@ export default async function initDB () {
         }
     })
 
-
+    await createTableIfNotExists('log_history', {
+        id: {
+            type: 'INTEGER',
+            primaryKey: true,
+            autoIncrement: true,
+            notNull: true,
+        },
+        table_name: {
+            type: 'TEXT',
+            notNull: true
+        }
+    })
 
     // let list = []
     // for(let i = 0; i < 100; i++) {

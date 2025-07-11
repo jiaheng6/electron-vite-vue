@@ -1,10 +1,22 @@
 import {ipcMain, dialog, ipcRenderer} from 'electron'
-import {query, insert, remove, paginate, createTableIfNotExists, batchInsert, tableExists, dropTable} from '../sqlite3'
+import fs from 'node:fs'
+import {
+    query,
+    insert,
+    remove,
+    paginate,
+    createTableIfNotExists,
+    batchInsert,
+    tableExists,
+    dropTable,
+    rawQuery
+} from '../sqlite3'
 import {v4 as uuidv4} from "uuid";
-import { FileHandler } from './fileManage'
+import {FileHandler} from './fileManage'
 import chat from './modelChat'
+import moment from "moment";
 
-async function readFileTop(startLie:number, endLine:number) {
+async function readFileTop(startLie: number, endLine: number) {
     return new Promise(async (resolve, reject) => {
         console.log('--27--❀---> 打开文件')
         const fileHandler = new FileHandler();
@@ -64,61 +76,83 @@ export function registerDatasetHandlers() {
         return await remove('dataset', {id})
     })
 
-    // 通过读取前n条记录，大模型生成分割规则
-    ipcMain.handle('log:askForReg', async () => {
-        let top20Text = await readFileAll();
-        const codeText = ``
-        const returnText = ``
-        // let promptText = `下面是一段日志文件：${top20Text}。根据给出的一段日志内容，提取日志，每一段有一个时间戳，返回一段正则表达式，用以分割所有日志内容（注意一段完整的日志，可能有多行组成。仔细识别，按照规律用时间戳分段。）。我会根据分割标识正则表达式，使用分割的js代码循环对每一行日志内容进行分割。代码为：${codeText}。为了保证代码的正常执行，注意：不要返回多余的内容，比如不要携带markdown那种\`\`\`json标识，直接返回一个普通的json字符串，格式如下${returnText}，以便我可以直接运行JSON.parse进行格式化。`
-        let fileHandler = new FileHandler();
-        let _list = await fileHandler.parseLogs(top20Text)
-        await loadInDataBase(_list)
-        // 7
+    ipcMain.handle('log:askForReg', async (event) => {
+        const fileHandler = new FileHandler();
+        const {canceled, filePaths} = await dialog.showOpenDialog({
+            properties: ['openFile'],
+            filters: [{name: 'Log Files', extensions: ['log']}]
+        });
+
+        if (canceled || filePaths.length === 0) {
+            return {
+                originText: '',
+                list: []
+            };
+        }
+
+        const filePath = filePaths[0];
+        const chunkSize = 5000;
+        let offset = 0;
+        let allText = '';
+        let allParsedLogs = [];
+        const totalLines = await fileHandler.countLines(filePath);
+        let timeStr = moment().format('YYYY_MM_DD_HH_mm_ss')
+        const tableName = `log_${timeStr}`;
+        // 先把表名存储到历史表里面，避免处理失败或者前端问题，没有记录到这张表
+        await insert('log_history', {
+            table_name: tableName,
+        });
+
+        await createTableIfNotExists(tableName, {
+            id: {
+                type: 'INTEGER',
+                primaryKey: true,
+                autoIncrement: true,
+                notNull: true,
+            },
+            timestamp: {
+                type: 'TIMESTAMP',
+                notNull: true
+            },
+            content: {
+                type: 'TEXT',
+                notNull: true,
+            }
+        });
+
+        while (true) {
+            const chunkText = await fileHandler.readLines(filePath, offset, offset + chunkSize);
+            if (!chunkText || chunkText.length === 0) break;
+
+            allText += chunkText;
+            const parsedChunk = await fileHandler.parseLogs(chunkText);
+            allParsedLogs = allParsedLogs.concat(parsedChunk);
+            console.log('--130--❀---> ')
+            if (parsedChunk) {
+                console.log('--132--❀---> ')
+                try {
+                    await batchInsert(tableName, parsedChunk);
+                } catch (e) {
+                    console.log('批量插入失败', e)
+                    console.log('--137--❀---> ', parsedChunk)
+                }
+            }
+            console.log('--135--❀---> ')
+            const progress = Math.min(Math.round((offset / totalLines) * 100), 100);
+            event.sender.send('log-insert-chunk', {
+                tableName,
+                batch: parsedChunk,
+                progress
+            });
+
+            offset += chunkSize;
+        }
+
         return {
-            originText: top20Text,
-            list: _list
+            data: tableName,
+            msg: '加载完成'
         };
     })
-
-    function loadInDataBase (data: Record<string, any>) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const uuid = uuidv4().replaceAll('-', '');
-                console.log('--87--❀---> ', uuid)
-                const tableName = `log_${uuid}`;
-                await createTableIfNotExists(tableName, {
-                    id: {
-                        type: 'INTEGER',
-                        primaryKey: true,
-                        autoIncrement: true,
-                        notNull: true,
-                    },
-                    timestamp: {
-                        type: 'TIMESTAMP',
-                        notNull: true
-                    },
-                    content: {
-                        type: 'TEXT',
-                        notNull: true,
-                    }
-                })
-                const batchSize = 1000;
-                for (let i = 0; i < data.length; i += batchSize) {
-                    const batch = data.slice(i, i + batchSize);
-                    await batchInsert(tableName, batch);
-                }
-                await batchInsert('log_history', [{
-                    table_name: tableName,
-                }])
-                resolve('success')
-            } catch (e) {
-                reject(e)
-            }
-            // 创建一个表，用来存储fileHandler.parseLogs转换出来的记录，包含自增的id，timestamp,content，表名用`log_${uuid}`
-            // 把转换处理完成的数组批量存储进入表
-            // 创建成功之后，在log_history表，把表名存进去，以便后续删除
-        })
-    }
 
     ipcMain.handle('log:clearAllLog', async () => {
         try {
@@ -126,9 +160,7 @@ export function registerDatasetHandlers() {
             for (const log of all_logs) {
                 let is_exist = await tableExists(log.table_name)
                 if (is_exist) {
-                    // 删除指定的日志表
                     await dropTable(log.table_name)
-                    // 从日志记录表里面，删除指定的记录
                     await remove('log_history', {
                         id: log.id
                     })
@@ -143,6 +175,61 @@ export function registerDatasetHandlers() {
                 data: [],
                 msg: e
             }
+        }
+    })
+
+    ipcMain.handle('log:deleteLog', async (_, table_name) => {
+        let is_exist = await tableExists(table_name)
+        if (is_exist) {
+            await dropTable(table_name)
+            await remove('log_history', {
+                table_name: table_name
+            })
+        }
+    })
+
+    ipcMain.handle('log:query', async (event, {tableName, startTime, endTime, searchText, sortType}) => {
+        try {
+            const exists = await tableExists(tableName);
+            if (!exists) {
+                return {
+                    data: [],
+                    msg: '记录不存在，请重新载入'
+                };
+            }
+
+            let sql = 'SELECT timestamp, content FROM ' + tableName + ' WHERE 1=1';
+            const params = [];
+
+            if (startTime) {
+                sql += ' AND timestamp >= ?';
+                params.push(startTime);
+            }
+
+            if (endTime) {
+                sql += ' AND timestamp <= ?';
+                params.push(endTime);
+            }
+
+            if (searchText) {
+                sql += ' AND content LIKE ?';
+                params.push('%' + searchText + '%');
+            }
+
+            if (sortType) {
+                sql += ' ORDER BY timestamp ' + (sortType === 'ascend' ? 'ASC' : 'DESC');
+            }
+
+            const result = await rawQuery(sql, params);
+            return {
+                data: result,
+                msg: '查询成功'
+            };
+        } catch (e) {
+            return {
+                data: [],
+                msg: e.message
+            };
         }
     })
 }

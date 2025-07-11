@@ -175,17 +175,20 @@ export async function rawQuery(sql: string, params: any[] = []) {
 
 export async function batchInsert(table: string, dataArray: Record<string, any>[]) {
     const db = await getSqlite3()
-    const columns = Object.keys(dataArray[0]).join(', ')
-    const placeholders = dataArray.map(() =>
-        `(${Object.keys(dataArray[0]).map(() => '?').join(', ')})`
-    ).join(', ')
-    const values = dataArray.flatMap(data => Object.values(data))
-
     return new Promise((resolve, reject) => {
-        db.run(`INSERT INTO ${table} (${columns}) VALUES ${placeholders}`, values, function (err) {
-            if (err) reject(err)
-            else resolve(this.lastID)
-        })
+        try {
+            const columns = Object.keys(dataArray[0]).join(', ')
+            const placeholders = dataArray.map(() =>
+                `(${Object.keys(dataArray[0]).map(() => '?').join(', ')})`
+            ).join(', ')
+            const values = dataArray.flatMap(data => Object.values(data))
+            db.run(`INSERT INTO ${table} (${columns}) VALUES ${placeholders}`, values, function (err) {
+                if (err) reject(err)
+                else resolve(this.lastID)
+            })
+        } catch (e) {
+            reject(e)
+        }
     })
 }
 

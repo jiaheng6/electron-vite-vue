@@ -4,6 +4,8 @@ import ElementPlus from 'element-plus'
 
 import 'element-plus/dist/index.css'
 
+import ElementPlusX from 'vue-element-plus-x'
+
 import './style.css'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
@@ -16,7 +18,7 @@ import router from './router'
 
 import locale from 'element-plus/es/locale/lang/zh-cn'
 
-createApp(App).use(ElementPlus, { locale }).use(router)
+createApp(App).use(ElementPlus, { locale }).use(ElementPlusX).use(router)
   .mount('#app')
   .$nextTick(() => {
     postMessage({ payload: 'removeLoading' }, '*')

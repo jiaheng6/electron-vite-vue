@@ -6,26 +6,27 @@
             active-text-color="#ffd04b"
             background-color="#545c64"
             class="el-menu-vertical-demo"
-            default-active="4"
+            default-active=""
             text-color="#fff"
             :router="true"
+            :collapse="isCollapse"
             @open="handleOpen"
             @close="handleClose"
         >
-<!--          <el-menu-item index="/chat" @click="selectMenuItem">-->
-<!--            <el-icon><DocumentAdd /></el-icon>-->
-<!--            <span>对话</span>-->
-<!--          </el-menu-item>-->
-<!--          <el-menu-item index="/dataSet">-->
-<!--            <el-icon><IconMenu /></el-icon>-->
-<!--            <span>知识库</span>-->
-<!--          </el-menu-item>-->
-<!--          <el-menu-item index="3">-->
-<!--            <el-icon><Document /></el-icon>-->
-<!--            <span>提示词</span>-->
-<!--          </el-menu-item>-->
-          <el-menu-item index="/log">
+          <el-menu-item index="/chat" @click="selectMenuItem">
+            <el-icon><DocumentAdd /></el-icon>
+            <span>对话</span>
+          </el-menu-item>
+          <el-menu-item index="/dataSet">
+            <el-icon><IconMenu /></el-icon>
+            <span>知识库</span>
+          </el-menu-item>
+          <el-menu-item index="3">
             <el-icon><setting /></el-icon>
+            <span>提示词</span>
+          </el-menu-item>
+          <el-menu-item index="/log">
+            <el-icon><Document /></el-icon>
             <span>日志</span>
           </el-menu-item>
           <el-menu-item index="/setting">
@@ -57,7 +58,7 @@ export default {
   },
   data () {
     return {
-
+      isCollapse: false
     }
   },
   methods: {

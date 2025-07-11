@@ -7,6 +7,14 @@ import Setting from '../view/setting/index.vue'
 
 const routes = [
     {
+        path: '/log',
+        name: 'Log',
+        component: Log,
+        meta:{
+            keepAlive:true
+        }
+    },
+    {
         path: '/',
         name: 'Index',
         component: Index
@@ -20,11 +28,6 @@ const routes = [
         path: '/dataSet',
         name: 'DataSet',
         component: DataSet
-    },
-    {
-        path: '/log',
-        name: 'Log',
-        component: Log
     },
     {
         path: '/setting',

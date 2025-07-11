@@ -2,7 +2,10 @@
   <div class="app-container">
     <Menu @onChangeMenuItem="onChangeMenuItem"></Menu>
     <div class="content">
-      <RouterView></RouterView>
+      <keep-alive>
+        <router-view v-if="$route.meta.keepAlive" />
+      </keep-alive>
+      <router-view v-if="!$route.meta.keepAlive" />
     </div>
   </div>
 </template>

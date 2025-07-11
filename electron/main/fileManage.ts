@@ -20,6 +20,7 @@ export class FileHandler {
             fractionalSecondDigits: 3
         }).replace(/\//g, '-');
     }
+
     async parseLogs(logText) {
         return new Promise((resolve, reject) => {
             try {
@@ -30,7 +31,7 @@ export class FileHandler {
                 let match;
 
                 while ((match = logRegex.exec(logText)) !== null) {
-                    const { timestamp, content } = match.groups;
+                    const {timestamp, content} = match.groups;
 
                     logs.push({
                         timestamp: this.formatTimestamp(timestamp),
@@ -349,5 +350,25 @@ export class FileHandler {
      */
     async joinPaths(...paths) {
         return path.join(...paths);
+    }
+
+    async countLines(filePath) {
+        return new Promise((resolve, reject) => {
+            let count = 0;
+            const stream = fs.createReadStream(filePath, {
+                encoding: 'utf8'
+            });
+            const rl = readline.createInterface({
+                input: stream,
+                crlfDelay: Infinity
+            });
+            rl.on('line', () => {
+                count++;
+            });
+            rl.on('close', () => {
+                resolve(count);
+            });
+            rl.on('error', reject);
+        });
     }
 }
